@@ -1,5 +1,7 @@
 package com.bobocode.util;
 
+import com.bobocode.exception.FileReaderException;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;

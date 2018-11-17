@@ -1,18 +1,19 @@
 CREATE TABLE IF NOT EXISTS actor (
-  id         BIGINT,
+  id SERIAL,
   first_name VARCHAR(255) NOT NULL,
   last_name  VARCHAR(255) NOT NULL,
-  birthday DATE NOT NULL,
+  birthday TIMESTAMP NOT NULL,
   CONSTRAINT PK_actor PRIMARY KEY (id)
 );
 
 
 CREATE TABLE IF NOT EXISTS movie (
-  id            BIGINT,
+  id SERIAL,
   name          VARCHAR(255) NOT NULL,
-  duration      FLOAT NOT NULL,
-  release_date  DATE NOT NULL,
-  CONSTRAINT PK_movie PRIMARY KEY (id)
+  duration      BIGINT NOT NULL,
+  release_date  TIMESTAMP NOT NULL,
+  CONSTRAINT PK_movie PRIMARY KEY (id),
+  CONSTRAINT UQ_name_duration_release_date UNIQUE (name, duration, release_date)
 );
 
 
