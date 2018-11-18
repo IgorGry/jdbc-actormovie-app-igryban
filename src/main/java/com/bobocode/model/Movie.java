@@ -8,7 +8,7 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(of = {"id", "releaseDate"})
+@EqualsAndHashCode(of = {"id", "name", "releaseDate"})
 @ToString
 @Builder
 public class Movie {

@@ -12,6 +12,13 @@ import java.util.Objects;
 public class MovieDaoImpl implements MovieDao {
     private static final String INSERT_SQL = "INSERT INTO movie (name, duration, release_date) VALUES (?, ?, ?);";
     private static final String SELECT_BY_NAME_SQL = "SELECT * FROM movie WHERE name=?;";
+    private static final String SELECT_BY_ID_SQL = "SELECT * FROM movie WHERE id=?;";
+    private static final String SELECT_ALL_SQL = "SELECT * FROM movie;";
+    private static final String SELECT_MOVIE_BY_ACTOR_SQL = "SELECT * FROM movie " +
+            "LEFT JOIN actor_movie am " +
+            "ON movie.id = am.movie_id" +
+            " LEFT JOIN actor ON am.actor_id = actor.id " +
+            "WHERE actor.first_name = ? AND actor.last_name=?;";
     private DataSource dataSource;
 
     public MovieDaoImpl(DataSource dataSource) {
@@ -68,7 +75,7 @@ public class MovieDaoImpl implements MovieDao {
     }
 
     @Override
-    public List<Movie>  findByName(String name) {
+    public List<Movie> findByName(String name) {
         Objects.requireNonNull(name);
         try (Connection connection = dataSource.getConnection()) {
             return findMovieByName(name, connection);
@@ -81,7 +88,7 @@ public class MovieDaoImpl implements MovieDao {
         PreparedStatement selectByIdPreparedStatement = prepareSelectByIdStatement(name, connection);
         ResultSet resultSet = selectByIdPreparedStatement.executeQuery();
         List<Movie> movieList = collectToList(resultSet);
-        if(movieList.size()==0) {
+        if (movieList.size() == 0) {
             throw new DaoOperationException(String.format("Movie with name = %s does not exist", name));
         }
         return movieList;
@@ -89,7 +96,7 @@ public class MovieDaoImpl implements MovieDao {
 
     private List<Movie> collectToList(ResultSet resultSet) throws SQLException {
         List<Movie> movieList = new ArrayList<>();
-        while (resultSet.next()){
+        while (resultSet.next()) {
             Movie movie = parseRow(resultSet);
             movieList.add(movie);
         }
@@ -123,16 +130,72 @@ public class MovieDaoImpl implements MovieDao {
         }
     }
 
+    public void verifyMovieId(Long id, Connection connection) throws SQLException {
+        if (id == null) {
+            throw new DaoOperationException("Cannot find a movie without ID");
+        }
+        findMovieById(id, connection);
+    }
+
+    private Movie findMovieById(Long id, Connection connection) throws SQLException {
+        PreparedStatement selectByIdPreparedStatement = prepareSelectByIdStatement(id, connection);
+        ResultSet resultSet = selectByIdPreparedStatement.executeQuery();
+        if (resultSet.next()) {
+            return parseRow(resultSet);
+        } else {
+            throw new DaoOperationException(String.format("Movie with id = %d does not exist", id));
+        }
+    }
+
+    private PreparedStatement prepareSelectByIdStatement(Long id, Connection connection) {
+        try {
+            PreparedStatement selectByIdPreparedStatement = connection.prepareStatement(SELECT_BY_ID_SQL);
+            selectByIdPreparedStatement.setLong(1, id);
+            return selectByIdPreparedStatement;
+        } catch (SQLException e) {
+            throw new DaoOperationException("Couldn't prepare select by id statement with id=" + id, e);
+        }
+    }
 
     @Override
     public List<Movie> findAll() {
-        return null;
+        try (Connection connection = dataSource.getConnection()) {
+            return findAllMovies(connection);
+        } catch (SQLException e) {
+            throw new DaoOperationException("Couldn't find all movies", e);
+        }
+    }
+
+    private List<Movie> findAllMovies(Connection connection) throws SQLException {
+        Statement statement = connection.createStatement();
+        ResultSet resultSet = statement.executeQuery(SELECT_ALL_SQL);
+        return collectToList(resultSet);
     }
 
 
-
     @Override
-    public List findByActorFirstAndLastName(String actorFirstName, String ActorLastName) {
-        return null;
+    public List<Movie> findByActorFirstAndLastName(String actorFirstName, String actorLastName) {
+        Objects.requireNonNull(actorFirstName);
+        Objects.requireNonNull(actorLastName);
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement findMovieByActorPreparedStatement = prepareFindMovieByActorPreparedStatement(connection, actorFirstName, actorLastName);
+            ResultSet resultSet = findMovieByActorPreparedStatement.executeQuery();
+            return collectToList(resultSet);
+        } catch (SQLException e) {
+            throw new DaoOperationException("Couldn't find movie by actor first="+actorFirstName+" and lastName="+actorLastName, e);
+        }
+
+    }
+
+    private PreparedStatement prepareFindMovieByActorPreparedStatement(Connection connection, String actorFirstName, String actorLastName) {
+        try {
+            PreparedStatement findMovieByActorPreparedStatement = connection.prepareStatement(SELECT_MOVIE_BY_ACTOR_SQL);
+            findMovieByActorPreparedStatement.setString(1,actorFirstName);
+            findMovieByActorPreparedStatement.setString(2,actorLastName);
+            return findMovieByActorPreparedStatement;
+
+        } catch (SQLException e) {
+            throw new DaoOperationException("Couldn't prepareFindMovieByActorPreparedStatement with actorFirstName" + actorFirstName + " and actorLastName" + actorLastName, e);
+        }
     }
 }

@@ -10,6 +10,7 @@ import java.util.Objects;
 public class ActorDaoImpl implements ActorDao {
     private static final String INSERT_SQL = "INSERT INTO actor (first_name, last_name, birthday) VALUES (?, ?, ?);";
     private static final String SELECT_BY_ID_SQL = "SELECT * FROM actor WHERE id=?;";
+    private static final String INSERT_ACTOR_MOVIE_LINK_SQL = "INSERT INTO actor_movie (actor_id, movie_id) VALUES (?, ?);";
     private DataSource dataSource;
 
     public ActorDaoImpl(DataSource dataSource) {
@@ -45,7 +46,7 @@ public class ActorDaoImpl implements ActorDao {
         if (generatedKeys.next()) {
             return generatedKeys.getLong(1);
         } else {
-            throw new DaoOperationException("Can not obtain product ID");
+            throw new DaoOperationException("Can not obtain actor ID");
         }
     }
 
@@ -108,12 +109,38 @@ public class ActorDaoImpl implements ActorDao {
             selectByIdPreparedStatement.setLong(1, id);
             return selectByIdPreparedStatement;
         } catch (SQLException e) {
-            throw new DaoOperationException("Couldn't prepare select by id statement with id=" + id, e);
+            throw new DaoOperationException("Couldn't prepare select by id prepared statement with id=" + id, e);
         }
+    }
+
+    public void verifyActorId(Long id, Connection connection) throws SQLException {
+        if (id == null) {
+            throw new DaoOperationException("Cannot find a actor without ID");
+        }
+        findActorById(id, connection);
     }
 
     @Override
     public void linkActorToMovieByID(Long actorId, Long movieId) {
+        try (Connection connection = dataSource.getConnection()) {
+            verifyActorId(actorId, connection);
+            MovieDaoImpl movieDao = new MovieDaoImpl(dataSource);
+            movieDao.verifyMovieId(movieId, connection);
+            PreparedStatement insertActorMovieLinkPreparedStatement = prepareInsertActorMovieLinkStatement(connection, actorId, movieId);
+            executeUpdate(insertActorMovieLinkPreparedStatement);
+        } catch (SQLException e) {
+            throw new DaoOperationException("Couldn't link actor to movie by id");
+        }
+    }
 
+    private PreparedStatement prepareInsertActorMovieLinkStatement(Connection connection, Long actorId, Long movieId) {
+        try {
+            PreparedStatement insertActorMovieLinkPreparedStatement = connection.prepareStatement(INSERT_ACTOR_MOVIE_LINK_SQL);
+            insertActorMovieLinkPreparedStatement.setLong(1, actorId);
+            insertActorMovieLinkPreparedStatement.setLong(2, movieId);
+            return insertActorMovieLinkPreparedStatement;
+        } catch (SQLException e) {
+            throw new DaoOperationException("Couldn't prepare statement for insert actor movie link for actor id" + actorId + " movieID" + movieId, e);
+        }
     }
 }

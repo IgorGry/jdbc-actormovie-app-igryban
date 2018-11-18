@@ -9,7 +9,7 @@ public interface MovieDao {
 
     List<Movie> findAll();
 
-    List<Movie>  findByName(String name);
+    List<Movie> findByName(String name);
 
-    List findByActorFirstAndLastName(String actorFirstName, String ActorLastName);
+    List<Movie> findByActorFirstAndLastName(String actorFirstName, String actorLastName);
 }
